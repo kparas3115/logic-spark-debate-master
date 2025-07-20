@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Hero } from '@/components/Hero';
+import { OnboardingSequence } from '@/components/OnboardingSequence';
+import { HowItWorks } from '@/components/HowItWorks';
 import { UserProfile } from '@/components/UserProfile';
+import { StatsDashboard } from '@/components/StatsDashboard';
 import { LevelCard } from '@/components/LevelCard';
 import { LevelView } from '@/components/LevelView';
 import { LessonView } from '@/components/LessonView';
+import { LivePracticeArena } from '@/components/LivePracticeArena';
+import { TournamentSimulation } from '@/components/TournamentSimulation';
+import { DemoMode } from '@/components/DemoMode';
 import { AICoachBubble } from '@/components/AICoachBubble';
 import { useProgress } from '@/hooks/useProgress';
 import { debateLevels } from '@/lib/debateData';
@@ -11,10 +17,11 @@ import { DebateLevel, Lesson } from '@/types/debate';
 import { AICoach } from '@/lib/aiCoach';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Home, User } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Home, User, Trophy, BarChart3, Zap, Monitor, Gamepad2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-type ViewMode = 'hero' | 'dashboard' | 'level' | 'lesson';
+type ViewMode = 'hero' | 'onboarding' | 'dashboard' | 'level' | 'lesson' | 'arena' | 'tournament' | 'demo';
 
 const Index = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('hero');
@@ -34,7 +41,20 @@ const Index = () => {
     }
   }, [viewMode, progress.completedLessons.length]);
 
+  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('debate-onboarding-complete'));
+  const [activeTab, setActiveTab] = useState('levels');
+
   const handleStartLearning = () => {
+    if (showOnboarding) {
+      setViewMode('onboarding');
+    } else {
+      setViewMode('dashboard');
+    }
+  };
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('debate-onboarding-complete', 'true');
+    setShowOnboarding(false);
     setViewMode('dashboard');
   };
 
@@ -106,7 +126,54 @@ const Index = () => {
   };
 
   if (viewMode === 'hero') {
-    return <Hero onStartLearning={handleStartLearning} />;
+    return (
+      <div>
+        <Hero onStartLearning={handleStartLearning} />
+        <div className="container mx-auto p-6">
+          <HowItWorks onStartDemo={() => setViewMode('demo')} />
+        </div>
+      </div>
+    );
+  }
+
+  if (viewMode === 'onboarding') {
+    return <OnboardingSequence onComplete={handleOnboardingComplete} />;
+  }
+
+  if (viewMode === 'demo') {
+    return <DemoMode onExit={() => setViewMode('hero')} />;
+  }
+
+  if (viewMode === 'arena') {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="container mx-auto">
+          <LivePracticeArena
+            onComplete={(points) => {
+              addPoints(points);
+              setViewMode('dashboard');
+            }}
+            onBack={() => setViewMode('dashboard')}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (viewMode === 'tournament') {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="container mx-auto">
+          <TournamentSimulation
+            onComplete={(points) => {
+              addPoints(points);
+              setViewMode('dashboard');
+            }}
+            onBack={() => setViewMode('dashboard')}
+          />
+        </div>
+      </div>
+    );
   }
 
   if (viewMode === 'lesson' && selectedLesson) {
@@ -174,24 +241,58 @@ const Index = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            <div>
-              <h2 className="text-3xl font-bold text-primary mb-2">Learning Path</h2>
-              <p className="text-muted-foreground mb-6">
-                Progress through 5 levels to master the art of debate. Each level builds on the previous one.
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-primary mb-2">Debate Master Hub</h2>
+                <p className="text-muted-foreground">
+                  Choose your learning path and practice mode
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setViewMode('arena')}
+                  className="bg-gradient-gold hover:bg-gradient-gold/90"
+                >
+                  <Gamepad2 className="w-4 h-4 mr-2" />
+                  Live Arena
+                </Button>
+                <Button
+                  onClick={() => setViewMode('tournament')}
+                  variant="outline"
+                >
+                  <Trophy className="w-4 h-4 mr-2" />
+                  Tournament
+                </Button>
+              </div>
             </div>
 
-            {/* Levels Grid */}
-            <div className="space-y-4">
-              {levels.map((level) => (
-                <LevelCard
-                  key={level.id}
-                  level={level}
-                  userPoints={progress.points}
-                  onEnterLevel={handleEnterLevel}
-                />
-              ))}
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="levels" className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  Learning Path
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  Analytics
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="levels" className="space-y-4 mt-6">
+                {levels.map((level) => (
+                  <LevelCard
+                    key={level.id}
+                    level={level}
+                    userPoints={progress.points}
+                    onEnterLevel={handleEnterLevel}
+                  />
+                ))}
+              </TabsContent>
+              
+              <TabsContent value="analytics" className="mt-6">
+                <StatsDashboard progress={progress} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 
