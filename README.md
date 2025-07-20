@@ -49,10 +49,6 @@ npm start
 4. Progress tracking shows skill improvement
 5. Achievements unlock as students advance
 
-## Demo
-
-[Live Demo](your-demo-link) | [Video](your-video-link)
-
 ## License
 
 MIT License - see LICENSE file for details.
